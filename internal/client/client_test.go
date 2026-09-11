@@ -528,7 +528,7 @@ func pageBounds(total, page, size int) (start, end int) {
 
 func newTestClient(t *testing.T, srv *httptest.Server) *Client {
 	t.Helper()
-	c, err := NewClient(srv.URL, "admin", "hunter2", false)
+	c, err := NewClient(srv.URL, "admin", "hunter2", "", "", false)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}

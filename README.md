@@ -13,6 +13,16 @@ administrator privileges on the target site works; a dedicated service account i
 recommended over reusing a personal login. Environment variables `OMADA_USERNAME` and
 `OMADA_PASSWORD` can be used instead of putting these in provider config.
 
+**Open API client ID / secret (optional)**: create a Client-mode application under
+Settings → Platform Integration → Open API. When `client_id` and `client_secret`
+are configured, the provider authenticates public Open API operations with the
+application's scoped access token and refreshes expiring tokens automatically.
+Controller-internal web endpoints continue to use the classic username/password
+session, including the internal endpoints whose paths begin with `/openapi`. If the
+application credentials are omitted, public Open API operations also fall back to the
+classic session. Use environment variables `OMADA_CLIENT_ID` and
+`OMADA_CLIENT_SECRET` to keep the secret out of HCL.
+
 **Site name or ID**: on the controller UI, the current site is shown in the top-left site
 selector. Its name (e.g. `Default`) can be used directly in provider config as `site`; its ID
 is visible in the browser URL after selecting the site (the segment following `/#/site/...`,
@@ -28,6 +38,10 @@ provider "omada" {
   base_url = "https://192.168.1.1:8043"
   username = "admin"
   password = "changeme"
+
+  # Optional Open API application credentials.
+  client_id     = "terraform"
+  client_secret = "replace-with-the-open-api-app-secret"
   site     = "Default"
 }
 ```
@@ -49,7 +63,7 @@ terraform {
   required_providers {
     omada = {
       source  = "filipegalo/omada"
-      version = "~> 0.1"
+      version = "~> 0.3"
     }
   }
 }

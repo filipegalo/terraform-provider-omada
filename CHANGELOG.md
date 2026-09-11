@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 (2026-09-11)
+
+FEATURES:
+
+* provider: optional `client_id` and `client_secret` authenticate public Open API
+  requests with an Omada Client-mode application. Credentials can also be read
+  from `OMADA_CLIENT_ID` and `OMADA_CLIENT_SECRET`.
+* Open API access tokens are refreshed shortly before expiry and once after an
+  Omada token-expiry response. Controller-internal web endpoints retain classic
+  session authentication even though some of their paths begin with `/openapi`.
+  When client credentials are omitted, public Open API paths also fall back to
+  classic-session authentication.
+
 ## 0.3.0 (2026-09-11)
 
 FEATURES:

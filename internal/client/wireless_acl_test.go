@@ -30,7 +30,7 @@ func newObjectUpdateTestClient(t *testing.T, endpoint string, current map[string
 			http.NotFound(w, r)
 		}
 	}))
-	c, err := NewClient(server.URL, "admin", "password", false)
+	c, err := NewClient(server.URL, "admin", "password", "", "", false)
 	if err != nil {
 		server.Close()
 		t.Fatalf("NewClient: %v", err)

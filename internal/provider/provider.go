@@ -41,6 +41,8 @@ type providerModel struct {
 	BaseURL       types.String `tfsdk:"base_url"`
 	Username      types.String `tfsdk:"username"`
 	Password      types.String `tfsdk:"password"`
+	ClientID      types.String `tfsdk:"client_id"`
+	ClientSecret  types.String `tfsdk:"client_secret"`
 	Site          types.String `tfsdk:"site"`
 	SkipTLSVerify types.Bool   `tfsdk:"skip_tls_verify"`
 }
@@ -67,6 +69,15 @@ func (p *omadaProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 				Sensitive:   true,
 				Description: "Local Omada admin password. Falls back to the OMADA_PASSWORD environment variable.",
 			},
+			"client_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "Public Open API application Client ID. Falls back to the OMADA_CLIENT_ID environment variable. Must be set together with client_secret.",
+			},
+			"client_secret": schema.StringAttribute{
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Public Open API application Client Secret. Falls back to the OMADA_CLIENT_SECRET environment variable. Must be set together with client_id.",
+			},
 			"site": schema.StringAttribute{
 				Optional:    true,
 				Description: "Site name or ID to resolve at startup. Falls back to the OMADA_SITE environment variable.",
@@ -89,6 +100,8 @@ func (p *omadaProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	baseURL := stringOrEnv(config.BaseURL, "OMADA_URL")
 	username := stringOrEnv(config.Username, "OMADA_USERNAME")
 	password := stringOrEnv(config.Password, "OMADA_PASSWORD")
+	clientID := stringOrEnv(config.ClientID, "OMADA_CLIENT_ID")
+	clientSecret := stringOrEnv(config.ClientSecret, "OMADA_CLIENT_SECRET")
 	site := stringOrEnv(config.Site, "OMADA_SITE")
 	skipTLSVerify := boolOrEnv(config.SkipTLSVerify, "OMADA_SKIP_TLS_VERIFY")
 
@@ -101,6 +114,9 @@ func (p *omadaProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if password == "" {
 		resp.Diagnostics.AddAttributeError(path.Root("password"), "Missing password", "Set password in the provider configuration or the OMADA_PASSWORD environment variable.")
 	}
+	if (clientID == "") != (clientSecret == "") {
+		resp.Diagnostics.AddError("Incomplete Open API credentials", "Set both client_id and client_secret, or omit both to use classic authentication for every request.")
+	}
 	if site == "" {
 		resp.Diagnostics.AddAttributeError(path.Root("site"), "Missing site", "Set site in the provider configuration or the OMADA_SITE environment variable.")
 	}
@@ -108,7 +124,7 @@ func (p *omadaProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		return
 	}
 
-	c, err := client.NewClient(baseURL, username, password, skipTLSVerify)
+	c, err := client.NewClient(baseURL, username, password, clientID, clientSecret, skipTLSVerify)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create Omada client", err.Error())
 		return
