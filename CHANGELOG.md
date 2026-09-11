@@ -1,6 +1,32 @@
 # Changelog
 
-## 0.1.0 (Unreleased)
+## 0.2.0 (2026-09-11)
+
+FEATURES:
+
+* **New Resource:** `omada_switch_port` — manages the configuration of an
+  existing physical switch port, including its name, port profile, VLAN
+  overrides, link speed and duplex settings. Removing it from Terraform only
+  relinquishes management and does not reset the live port.
+* **New Resource:** `omada_switch_port_profile` — manages reusable switch port
+  profiles and their native, tagged and untagged VLAN associations. Updates
+  preserve controller-owned and unmodelled PoE, STP and LLDP settings.
+* **New Data Source:** `omada_site` — resolves a site by name or ID, or returns
+  the provider's configured site.
+* **New Data Source:** `omada_vlan` — resolves an existing VLAN by name,
+  internal network ID or IEEE 802.1Q VLAN ID.
+* **New Data Source:** `omada_switch_port_profile` — resolves an existing port
+  profile by name or ID without taking ownership of it.
+* **New Data Source:** `omada_switch` — resolves an adopted switch by name or
+  MAC and exposes its model, status, firmware information and physical ports.
+
+NOTES:
+
+* Switch port, profile and all four data-source reads were verified against a
+  controller running 6.3.0.45. Port-profile writes use read-modify-write so
+  fields outside Terraform's schema survive an update.
+
+## 0.1.0 (2026-09-11)
 
 First release.
 

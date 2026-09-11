@@ -12,10 +12,15 @@ type Site struct {
 	Name string `json:"name"`
 }
 
+// ListSites returns every site visible to the configured controller account.
+func (c *Client) ListSites(ctx context.Context) ([]Site, error) {
+	return listAllPages[Site](ctx, c, c.classicPath("sites"))
+}
+
 // ResolveSite resolves a site name or ID to its ID. An exact ID match wins;
 // otherwise sites are matched by name, case-insensitively.
 func (c *Client) ResolveSite(ctx context.Context, nameOrID string) (string, error) {
-	sites, err := listAllPages[Site](ctx, c, c.classicPath("sites"))
+	sites, err := c.ListSites(ctx)
 	if err != nil {
 		return "", fmt.Errorf("listing sites: %w", err)
 	}

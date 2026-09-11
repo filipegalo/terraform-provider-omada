@@ -38,7 +38,11 @@ type mockServer struct {
 	sites          []Site
 	reservations   map[string]DHCPReservation // keyed by lowercase MAC
 	vlans          map[string]map[string]any  // keyed by network ID
-	lastPutPath    string                     // last PUT request path, for asserting what key an update used
+	ports          map[string]SwitchPort      // keyed by switch MAC and physical port
+	profiles       map[string]map[string]any  // keyed by port-profile ID
+	devices        []Device
+	lastPutPath    string // last PUT request path, for asserting what key an update used
+	lastPatchPath  string
 }
 
 const (
@@ -61,6 +65,18 @@ func newMockServer(t *testing.T, controllerVer string) *mockServer {
 				"interfaceIds": []any{"2_aaaa", "3_bbbb", "4_cccc", "5_dddd"},
 			},
 		},
+		ports: map[string]SwitchPort{
+			switchPortTestKey("D8-44-89-38-C6-C0", 2): {
+				ID: "port-object-id", Port: 2, SwitchMAC: "D8-44-89-38-C6-C0", Name: "Camera",
+				TagIDs: []string{"tag-security"}, NativeNetworkID: "network-security", NetworkTagsSetting: 1,
+				ProfileID: "profile-security", ProfileOverrideEnable: false, ProfileVLANOverrideEnable: false,
+				LinkSpeed: 0, Duplex: 0,
+			},
+		},
+		profiles: map[string]map[string]any{},
+		devices: []Device{{
+			Name: "Main Switch", Type: "switch", Model: "SG2210P", MAC: "D8-44-89-38-C6-C0", IP: "10.20.1.2", StatusCategory: 1,
+		}},
 	}
 }
 
@@ -91,6 +107,11 @@ func (m *mockServer) route(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.serveNetworkParamCheck(w, r)
+	case strings.Contains(r.URL.Path, "/openapi/") && strings.Contains(r.URL.Path, "/switches/"):
+		if !m.checkAuth(w, r) {
+			return
+		}
+		m.serveSwitchPortPatch(w, r)
 	case strings.Contains(r.URL.Path, "/openapi/") && strings.Contains(r.URL.Path, lanNetworksEndpoint):
 		if !m.checkAuth(w, r) {
 			return
@@ -104,10 +125,162 @@ func (m *mockServer) route(w http.ResponseWriter, r *http.Request) {
 			m.serveVLANs(w, r)
 			return
 		}
+		if strings.HasSuffix(r.URL.Path, "/devices") {
+			m.mu.Lock()
+			devices := append([]Device(nil), m.devices...)
+			m.mu.Unlock()
+			writeEnvelope(w, 0, "", devices)
+			return
+		}
+		if strings.Contains(r.URL.Path, "/switches/") {
+			m.serveSwitchPorts(w, r)
+			return
+		}
+		if strings.Contains(r.URL.Path, "/setting/lan/profiles") {
+			m.serveSwitchPortProfiles(w, r)
+			return
+		}
 		m.serveDHCP(w, r)
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (m *mockServer) serveSwitchPortProfiles(w http.ResponseWriter, r *http.Request) {
+	const endpoint = "/setting/lan/profiles"
+	idx := strings.Index(r.URL.Path, endpoint)
+	suffix := strings.Trim(strings.TrimPrefix(r.URL.Path[idx:], endpoint), "/")
+	switch r.Method {
+	case http.MethodGet:
+		m.mu.Lock()
+		all := make([]map[string]any, 0, len(m.profiles))
+		for _, profile := range m.profiles {
+			all = append(all, profile)
+		}
+		m.mu.Unlock()
+		page, size := m.paginationParams(r)
+		start, end := pageBounds(len(all), page, size)
+		writeEnvelope(w, 0, "", map[string]any{"currentPage": page, "currentSize": size, "totalRows": len(all), "data": all[start:end]})
+	case http.MethodPost:
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			m.t.Fatalf("decoding port profile create body: %v", err)
+		}
+		id := fmt.Sprintf("profile-%d", len(m.profiles)+1)
+		body["id"] = id
+		body["prohibitModify"] = false
+		body["poe"] = float64(2)
+		body["spanningTreeSetting"] = map[string]any{"priority": float64(128), "instances": []any{map[string]any{"id": "mst-1"}}}
+		m.mu.Lock()
+		m.profiles[id] = body
+		m.mu.Unlock()
+		writeEnvelope(w, 0, "", nil)
+	case http.MethodPatch:
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			m.t.Fatalf("decoding port profile update body: %v", err)
+		}
+		m.mu.Lock()
+		_, ok := m.profiles[suffix]
+		if ok {
+			m.profiles[suffix] = body
+		}
+		m.mu.Unlock()
+		if !ok {
+			writeEnvelope(w, -4, "profile not found", nil)
+			return
+		}
+		writeEnvelope(w, 0, "", nil)
+	case http.MethodDelete:
+		m.mu.Lock()
+		delete(m.profiles, suffix)
+		m.mu.Unlock()
+		writeEnvelope(w, 0, "", nil)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func switchPortTestKey(mac string, port int64) string {
+	return fmt.Sprintf("%s:%d", NormalizeSwitchMAC(mac), port)
+}
+
+func (m *mockServer) serveSwitchPorts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet || !strings.HasSuffix(r.URL.Path, "/ports") {
+		http.NotFound(w, r)
+		return
+	}
+	parts := strings.Split(strings.TrimSuffix(r.URL.Path, "/ports"), "/")
+	if len(parts) == 0 {
+		http.NotFound(w, r)
+		return
+	}
+	mac := parts[len(parts)-1]
+	m.mu.Lock()
+	ports := make([]SwitchPort, 0)
+	for _, port := range m.ports {
+		if strings.EqualFold(port.SwitchMAC, mac) {
+			ports = append(ports, port)
+		}
+	}
+	m.mu.Unlock()
+	writeEnvelope(w, 0, "", ports)
+}
+
+func (m *mockServer) serveSwitchPortPatch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Header.Get("Omada-Request-Source") != "web-local" {
+		m.t.Error("switch port PATCH is missing Omada-Request-Source: web-local")
+	}
+	var body map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		m.t.Fatalf("decoding switch port PATCH: %v", err)
+	}
+	allowed := map[string]bool{"name": true, "tagIds": true, "nativeNetworkId": true, "networkTagsSetting": true, "profileId": true, "profileOverrideEnable": true, "profileVlanOverrideEnable": true, "linkSpeed": true, "duplex": true}
+	if len(body) != len(allowed) {
+		writeEnvelope(w, -1001, "invalid switch port request body", nil)
+		return
+	}
+	for field := range body {
+		if !allowed[field] {
+			writeEnvelope(w, -1001, "read-only switch port field: "+field, nil)
+			return
+		}
+	}
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 2 {
+		http.NotFound(w, r)
+		return
+	}
+	portNumber, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	mac := parts[len(parts)-3]
+	key := switchPortTestKey(mac, portNumber)
+	m.mu.Lock()
+	existing, ok := m.ports[key]
+	if ok {
+		data, _ := json.Marshal(body)
+		if err := json.Unmarshal(data, &existing); err != nil {
+			m.t.Fatalf("decoding switch port PATCH fields: %v", err)
+		}
+		// The partial decode above leaves identity alone only because it starts
+		// from the existing object, matching the controller's PATCH semantics.
+		existing.ID, existing.Port, existing.SwitchMAC = m.ports[key].ID, m.ports[key].Port, m.ports[key].SwitchMAC
+		m.ports[key] = existing
+		m.lastPatchPath = r.URL.Path
+	}
+	m.mu.Unlock()
+	if !ok {
+		writeEnvelope(w, -39701, "This port does not exist", nil)
+		return
+	}
+	writeEnvelope(w, 0, "", map[string]any{})
 }
 
 // hasLANInterfaces mirrors the controller's refusal to store a LAN network

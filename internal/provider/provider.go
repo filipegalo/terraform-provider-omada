@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/filipegalo/terraform-provider-omada/internal/client"
+	"github.com/filipegalo/terraform-provider-omada/internal/datasources"
 	"github.com/filipegalo/terraform-provider-omada/internal/resources"
 )
 
@@ -133,11 +134,18 @@ func (p *omadaProvider) Resources(_ context.Context) []func() resource.Resource 
 	return []func() resource.Resource{
 		resources.NewDHCPReservationResource,
 		resources.NewVLANResource,
+		resources.NewSwitchPortResource,
+		resources.NewSwitchPortProfileResource,
 	}
 }
 
 func (p *omadaProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		datasources.NewSiteDataSource,
+		datasources.NewVLANDataSource,
+		datasources.NewSwitchPortProfileDataSource,
+		datasources.NewSwitchDataSource,
+	}
 }
 
 func stringOrEnv(v types.String, envKey string) string {

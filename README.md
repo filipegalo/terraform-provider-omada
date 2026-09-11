@@ -34,7 +34,11 @@ provider "omada" {
 
 Full reference documentation is generated under [`docs/`](docs/), with runnable examples
 in [`examples/`](examples/). `omada_vlan` manages the 802.1Q tag, gateway subnet and DHCP
-scope; port profiles and SSID assignment remain separate Omada concerns.
+scope. `omada_switch_port` manages an existing physical switch port, including its name,
+applied profile, native network and link-speed settings. `omada_switch_port_profile`
+manages the native and tagged VLAN membership of reusable switch port profiles.
+Read-only lookups are available through `data.omada_site`, `data.omada_vlan`,
+`data.omada_switch_port_profile`, and `data.omada_switch`.
 
 ## Installing
 
