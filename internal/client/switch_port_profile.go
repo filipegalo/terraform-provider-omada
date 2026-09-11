@@ -21,6 +21,7 @@ type SwitchPortProfile struct {
 	Raw                map[string]any
 }
 
+// UnmarshalJSON decodes modelled fields while retaining the complete profile.
 func (p *SwitchPortProfile) UnmarshalJSON(data []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -86,10 +87,12 @@ func (c *Client) switchPortProfilesPath(siteID string) string {
 	return c.classicPath(fmt.Sprintf("sites/%s/setting/lan/profiles", siteID))
 }
 
+// ListSwitchPortProfiles returns every reusable switch port profile on a site.
 func (c *Client) ListSwitchPortProfiles(ctx context.Context, siteID string) ([]SwitchPortProfile, error) {
 	return listAllPages[SwitchPortProfile](ctx, c, c.switchPortProfilesPath(siteID))
 }
 
+// FindSwitchPortProfile finds a profile by its controller ID.
 func (c *Client) FindSwitchPortProfile(ctx context.Context, siteID, id string) (*SwitchPortProfile, error) {
 	profiles, err := c.ListSwitchPortProfiles(ctx, siteID)
 	if err != nil {
@@ -103,6 +106,7 @@ func (c *Client) FindSwitchPortProfile(ctx context.Context, siteID, id string) (
 	return nil, nil
 }
 
+// CreateSwitchPortProfile creates a profile and returns its controller ID.
 func (c *Client) CreateSwitchPortProfile(ctx context.Context, siteID string, cfg SwitchPortProfileConfig) (string, error) {
 	if err := c.doAuthenticated(ctx, "POST", c.switchPortProfilesPath(siteID), nil, cfg.fields(), nil); err != nil {
 		return "", err
@@ -119,6 +123,7 @@ func (c *Client) CreateSwitchPortProfile(ctx context.Context, siteID string, cfg
 	return "", fmt.Errorf("switch port profile %q was accepted but was not returned by the controller", cfg.Name)
 }
 
+// UpdateSwitchPortProfile updates owned fields while preserving the full object.
 func (c *Client) UpdateSwitchPortProfile(ctx context.Context, siteID, id string, cfg SwitchPortProfileConfig) error {
 	current, err := c.FindSwitchPortProfile(ctx, siteID, id)
 	if err != nil {
@@ -135,6 +140,7 @@ func (c *Client) UpdateSwitchPortProfile(ctx context.Context, siteID, id string,
 	return c.doAuthenticated(ctx, "PATCH", fmt.Sprintf("%s/%s", c.switchPortProfilesPath(siteID), id), nil, current.Raw, nil)
 }
 
+// DeleteSwitchPortProfile removes a profile from a site.
 func (c *Client) DeleteSwitchPortProfile(ctx context.Context, siteID, id string) error {
 	return c.doAuthenticated(ctx, "DELETE", fmt.Sprintf("%s/%s", c.switchPortProfilesPath(siteID), id), nil, nil, nil)
 }

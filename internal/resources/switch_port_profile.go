@@ -30,6 +30,7 @@ type switchPortProfileResource struct {
 	defaultSiteID string
 }
 
+// NewSwitchPortProfileResource returns the omada_switch_port_profile resource implementation.
 func NewSwitchPortProfileResource() resource.Resource { return &switchPortProfileResource{} }
 
 type switchPortProfileModel struct {

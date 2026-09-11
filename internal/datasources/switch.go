@@ -18,6 +18,7 @@ var _ datasource.DataSourceWithConfigure = &switchDataSource{}
 
 type switchDataSource struct{ configuredDataSource }
 
+// NewSwitchDataSource returns the omada_switch data source implementation.
 func NewSwitchDataSource() datasource.DataSource { return &switchDataSource{} }
 
 type switchPortDataModel struct {

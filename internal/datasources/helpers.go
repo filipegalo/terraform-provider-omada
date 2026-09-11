@@ -1,3 +1,4 @@
+// Package datasources implements read-only Omada lookups for Terraform.
 package datasources
 
 import (

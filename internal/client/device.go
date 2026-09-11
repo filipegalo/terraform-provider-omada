@@ -25,6 +25,7 @@ type Device struct {
 	ClientCount     int64  `json:"clientNum"`
 }
 
+// ListDevices returns every adopted gateway, switch and access point on a site.
 func (c *Client) ListDevices(ctx context.Context, siteID string) ([]Device, error) {
 	var devices []Device
 	path := c.classicPath(fmt.Sprintf("sites/%s/devices", siteID))

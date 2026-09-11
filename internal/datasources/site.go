@@ -15,6 +15,7 @@ var _ datasource.DataSourceWithConfigure = &siteDataSource{}
 
 type siteDataSource struct{ configuredDataSource }
 
+// NewSiteDataSource returns the omada_site data source implementation.
 func NewSiteDataSource() datasource.DataSource { return &siteDataSource{} }
 
 type siteDataSourceModel struct {

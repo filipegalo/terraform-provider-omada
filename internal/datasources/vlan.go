@@ -17,6 +17,7 @@ var _ datasource.DataSourceWithConfigure = &vlanDataSource{}
 
 type vlanDataSource struct{ configuredDataSource }
 
+// NewVLANDataSource returns the omada_vlan data source implementation.
 func NewVLANDataSource() datasource.DataSource { return &vlanDataSource{} }
 
 type vlanDataSourceModel struct {

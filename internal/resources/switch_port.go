@@ -36,6 +36,7 @@ type switchPortResource struct {
 	defaultSiteID string
 }
 
+// NewSwitchPortResource returns the omada_switch_port resource implementation.
 func NewSwitchPortResource() resource.Resource { return &switchPortResource{} }
 
 type switchPortModel struct {
