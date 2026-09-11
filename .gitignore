@@ -1,0 +1,8 @@
+/terraform-provider-omada_v*
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# goreleaser output
+/dist/

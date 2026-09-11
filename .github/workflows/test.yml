@@ -1,0 +1,64 @@
+name: Tests
+
+on:
+  pull_request:
+    paths-ignore: ['README.md']
+  push:
+    paths-ignore: ['README.md']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go mod download
+      - run: go build -v .
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+
+  generate:
+    name: Docs are up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+      - run: make generate
+      # Fails if docs/ or examples/ formatting differs from what is committed.
+      - run: git diff --compact-summary --exit-code
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test -v -cover ./...
+
+  # Acceptance tests talk to a real Omada Controller, which no hosted runner can
+  # reach, so they are not run here. Run them from a machine on the controller's
+  # network with `make testacc`.
