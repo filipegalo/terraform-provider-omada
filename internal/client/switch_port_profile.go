@@ -18,6 +18,25 @@ type SwitchPortProfile struct {
 	UntaggedNetworkIDs []string
 	VLANConfigEnable   bool
 	NetworkTagsSetting int64
+	POE                int64
+	PortIsolation      bool
+	LLDPMed            bool
+	Dot1x              int64
+	LoopbackDetect     bool
+	EEE                bool
+	FlowControl        bool
+	SpanningTree       bool
+	STPPriority        int64
+	STPExtPathCost     int64
+	STPIntPathCost     int64
+	STPP2PLink         int64
+	STPEdgePort        bool
+	STPLoopProtect     bool
+	STPRootProtect     bool
+	STPTCGuard         bool
+	STPBPDUProtect     bool
+	STPBPDUFilter      bool
+	STPBPDUForward     bool
 	Raw                map[string]any
 }
 
@@ -34,8 +53,27 @@ func (p *SwitchPortProfile) UnmarshalJSON(data []byte) error {
 	p.TaggedNetworkIDs = stringValues(raw["tagNetworkIds"])
 	p.UntaggedNetworkIDs = stringValues(raw["untagNetworkIds"])
 	p.VLANConfigEnable, _ = raw["vlanConfigEnable"].(bool)
-	if value, ok := raw["networkTagsSetting"].(float64); ok {
-		p.NetworkTagsSetting = int64(value)
+	p.NetworkTagsSetting = int64Value(raw["networkTagsSetting"])
+	p.POE = int64Value(raw["poe"])
+	p.PortIsolation, _ = raw["portIsolationEnable"].(bool)
+	p.LLDPMed, _ = raw["lldpMedEnable"].(bool)
+	p.Dot1x = int64Value(raw["dot1x"])
+	p.LoopbackDetect, _ = raw["loopbackDetectEnable"].(bool)
+	p.EEE, _ = raw["eeeEnable"].(bool)
+	p.FlowControl, _ = raw["flowControlEnable"].(bool)
+	p.SpanningTree, _ = raw["spanningTreeEnable"].(bool)
+	if stp, ok := raw["spanningTreeSetting"].(map[string]any); ok {
+		p.STPPriority = int64Value(stp["priority"])
+		p.STPExtPathCost = int64Value(stp["extPathCost"])
+		p.STPIntPathCost = int64Value(stp["intPathCost"])
+		p.STPP2PLink = int64Value(stp["p2pLink"])
+		p.STPEdgePort, _ = stp["edgePort"].(bool)
+		p.STPLoopProtect, _ = stp["loopProtect"].(bool)
+		p.STPRootProtect, _ = stp["rootProtect"].(bool)
+		p.STPTCGuard, _ = stp["tcGuard"].(bool)
+		p.STPBPDUProtect, _ = stp["bpduProtect"].(bool)
+		p.STPBPDUFilter, _ = stp["bpduFilter"].(bool)
+		p.STPBPDUForward, _ = stp["bpduForward"].(bool)
 	}
 	return nil
 }
@@ -61,6 +99,25 @@ type SwitchPortProfileConfig struct {
 	UntaggedNetworkIDs *[]string
 	VLANConfigEnable   *bool
 	NetworkTagsSetting *int64
+	POE                *int64
+	PortIsolation      *bool
+	LLDPMed            *bool
+	Dot1x              *int64
+	LoopbackDetect     *bool
+	EEE                *bool
+	FlowControl        *bool
+	SpanningTree       *bool
+	STPPriority        *int64
+	STPExtPathCost     *int64
+	STPIntPathCost     *int64
+	STPP2PLink         *int64
+	STPEdgePort        *bool
+	STPLoopProtect     *bool
+	STPRootProtect     *bool
+	STPTCGuard         *bool
+	STPBPDUProtect     *bool
+	STPBPDUFilter      *bool
+	STPBPDUForward     *bool
 }
 
 func (cfg SwitchPortProfileConfig) fields() map[string]any {
@@ -80,7 +137,36 @@ func (cfg SwitchPortProfileConfig) fields() map[string]any {
 	if cfg.NetworkTagsSetting != nil {
 		fields["networkTagsSetting"] = *cfg.NetworkTagsSetting
 	}
+	putPointer(fields, "poe", cfg.POE)
+	putPointer(fields, "portIsolationEnable", cfg.PortIsolation)
+	putPointer(fields, "lldpMedEnable", cfg.LLDPMed)
+	putPointer(fields, "dot1x", cfg.Dot1x)
+	putPointer(fields, "loopbackDetectEnable", cfg.LoopbackDetect)
+	putPointer(fields, "eeeEnable", cfg.EEE)
+	putPointer(fields, "flowControlEnable", cfg.FlowControl)
+	putPointer(fields, "spanningTreeEnable", cfg.SpanningTree)
+	stp := map[string]any{}
+	putPointer(stp, "priority", cfg.STPPriority)
+	putPointer(stp, "extPathCost", cfg.STPExtPathCost)
+	putPointer(stp, "intPathCost", cfg.STPIntPathCost)
+	putPointer(stp, "p2pLink", cfg.STPP2PLink)
+	putPointer(stp, "edgePort", cfg.STPEdgePort)
+	putPointer(stp, "loopProtect", cfg.STPLoopProtect)
+	putPointer(stp, "rootProtect", cfg.STPRootProtect)
+	putPointer(stp, "tcGuard", cfg.STPTCGuard)
+	putPointer(stp, "bpduProtect", cfg.STPBPDUProtect)
+	putPointer(stp, "bpduFilter", cfg.STPBPDUFilter)
+	putPointer(stp, "bpduForward", cfg.STPBPDUForward)
+	if len(stp) > 0 {
+		fields["spanningTreeSetting"] = stp
+	}
 	return fields
+}
+
+func putPointer[T any](target map[string]any, key string, value *T) {
+	if value != nil {
+		target[key] = *value
+	}
 }
 
 func (c *Client) switchPortProfilesPath(siteID string) string {
@@ -134,9 +220,7 @@ func (c *Client) UpdateSwitchPortProfile(ctx context.Context, siteID, id string,
 	}
 	// The endpoint requires a full object. Overlay only Terraform-owned fields
 	// onto the freshly read document and leave every other key untouched.
-	for key, value := range cfg.fields() {
-		current.Raw[key] = value
-	}
+	mergeFields(current.Raw, cfg.fields(), "spanningTreeSetting")
 	return c.doAuthenticated(ctx, "PATCH", fmt.Sprintf("%s/%s", c.switchPortProfilesPath(siteID), id), nil, current.Raw, nil)
 }
 

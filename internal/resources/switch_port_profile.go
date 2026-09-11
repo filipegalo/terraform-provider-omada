@@ -42,6 +42,25 @@ type switchPortProfileModel struct {
 	UntaggedNetworkIDs types.Set    `tfsdk:"untagged_network_ids"`
 	VLANConfigEnable   types.Bool   `tfsdk:"vlan_config_enable"`
 	NetworkTagsSetting types.Int64  `tfsdk:"network_tags_setting"`
+	POE                types.Int64  `tfsdk:"poe"`
+	PortIsolation      types.Bool   `tfsdk:"port_isolation_enable"`
+	LLDPMed            types.Bool   `tfsdk:"lldp_med_enable"`
+	Dot1x              types.Int64  `tfsdk:"dot1x"`
+	LoopbackDetect     types.Bool   `tfsdk:"loopback_detect_enable"`
+	EEE                types.Bool   `tfsdk:"eee_enable"`
+	FlowControl        types.Bool   `tfsdk:"flow_control_enable"`
+	SpanningTree       types.Bool   `tfsdk:"spanning_tree_enable"`
+	STPPriority        types.Int64  `tfsdk:"stp_priority"`
+	STPExtPathCost     types.Int64  `tfsdk:"stp_ext_path_cost"`
+	STPIntPathCost     types.Int64  `tfsdk:"stp_int_path_cost"`
+	STPP2PLink         types.Int64  `tfsdk:"stp_p2p_link"`
+	STPEdgePort        types.Bool   `tfsdk:"stp_edge_port"`
+	STPLoopProtect     types.Bool   `tfsdk:"stp_loop_protect"`
+	STPRootProtect     types.Bool   `tfsdk:"stp_root_protect"`
+	STPTCGuard         types.Bool   `tfsdk:"stp_tc_guard"`
+	STPBPDUProtect     types.Bool   `tfsdk:"stp_bpdu_protect"`
+	STPBPDUFilter      types.Bool   `tfsdk:"stp_bpdu_filter"`
+	STPBPDUForward     types.Bool   `tfsdk:"stp_bpdu_forward"`
 }
 
 func (r *switchPortProfileResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -73,8 +92,35 @@ func (r *switchPortProfileResource) Schema(_ context.Context, _ resource.SchemaR
 				Validators:    []validator.Int64{int64validator.OneOf(0, 1, 2)},
 				PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
+			"poe":                    optionalComputedInt("PoE mode: 0 off, 1 on, or 2 keep the device setting."),
+			"port_isolation_enable":  optionalComputedBool("Enable port isolation."),
+			"lldp_med_enable":        optionalComputedBool("Enable LLDP-MED."),
+			"dot1x":                  optionalComputedInt("802.1X controller mode."),
+			"loopback_detect_enable": optionalComputedBool("Enable loopback detection."),
+			"eee_enable":             optionalComputedBool("Enable Energy Efficient Ethernet."),
+			"flow_control_enable":    optionalComputedBool("Enable Ethernet flow control."),
+			"spanning_tree_enable":   optionalComputedBool("Enable spanning tree."),
+			"stp_priority":           optionalComputedInt("STP port priority."),
+			"stp_ext_path_cost":      optionalComputedInt("STP external path cost."),
+			"stp_int_path_cost":      optionalComputedInt("STP internal path cost."),
+			"stp_p2p_link":           optionalComputedInt("STP point-to-point controller mode."),
+			"stp_edge_port":          optionalComputedBool("Treat the port as an STP edge port."),
+			"stp_loop_protect":       optionalComputedBool("Enable STP loop protection."),
+			"stp_root_protect":       optionalComputedBool("Enable STP root protection."),
+			"stp_tc_guard":           optionalComputedBool("Enable STP topology-change guard."),
+			"stp_bpdu_protect":       optionalComputedBool("Enable STP BPDU protection."),
+			"stp_bpdu_filter":        optionalComputedBool("Enable STP BPDU filtering."),
+			"stp_bpdu_forward":       optionalComputedBool("Enable STP BPDU forwarding."),
 		},
 	}
+}
+
+func optionalComputedBool(description string) schema.BoolAttribute {
+	return schema.BoolAttribute{Optional: true, Computed: true, Description: description}
+}
+
+func optionalComputedInt(description string) schema.Int64Attribute {
+	return schema.Int64Attribute{Optional: true, Computed: true, Description: description}
 }
 
 func (r *switchPortProfileResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -199,7 +245,42 @@ func switchPortProfileConfig(model switchPortProfileModel) client.SwitchPortProf
 		value := model.NetworkTagsSetting.ValueInt64()
 		cfg.NetworkTagsSetting = &value
 	}
+	cfg.POE = intPointer(model.POE)
+	cfg.PortIsolation = boolPointer(model.PortIsolation)
+	cfg.LLDPMed = boolPointer(model.LLDPMed)
+	cfg.Dot1x = intPointer(model.Dot1x)
+	cfg.LoopbackDetect = boolPointer(model.LoopbackDetect)
+	cfg.EEE = boolPointer(model.EEE)
+	cfg.FlowControl = boolPointer(model.FlowControl)
+	cfg.SpanningTree = boolPointer(model.SpanningTree)
+	cfg.STPPriority = intPointer(model.STPPriority)
+	cfg.STPExtPathCost = intPointer(model.STPExtPathCost)
+	cfg.STPIntPathCost = intPointer(model.STPIntPathCost)
+	cfg.STPP2PLink = intPointer(model.STPP2PLink)
+	cfg.STPEdgePort = boolPointer(model.STPEdgePort)
+	cfg.STPLoopProtect = boolPointer(model.STPLoopProtect)
+	cfg.STPRootProtect = boolPointer(model.STPRootProtect)
+	cfg.STPTCGuard = boolPointer(model.STPTCGuard)
+	cfg.STPBPDUProtect = boolPointer(model.STPBPDUProtect)
+	cfg.STPBPDUFilter = boolPointer(model.STPBPDUFilter)
+	cfg.STPBPDUForward = boolPointer(model.STPBPDUForward)
 	return cfg
+}
+
+func boolPointer(value types.Bool) *bool {
+	if value.IsNull() || value.IsUnknown() {
+		return nil
+	}
+	result := value.ValueBool()
+	return &result
+}
+
+func intPointer(value types.Int64) *int64 {
+	if value.IsNull() || value.IsUnknown() {
+		return nil
+	}
+	result := value.ValueInt64()
+	return &result
 }
 
 func applySwitchPortProfile(state *switchPortProfileModel, found *client.SwitchPortProfile) {
@@ -210,6 +291,25 @@ func applySwitchPortProfile(state *switchPortProfileModel, found *client.SwitchP
 	state.UntaggedNetworkIDs = stringSet(found.UntaggedNetworkIDs)
 	state.VLANConfigEnable = types.BoolValue(found.VLANConfigEnable)
 	state.NetworkTagsSetting = types.Int64Value(found.NetworkTagsSetting)
+	state.POE = types.Int64Value(found.POE)
+	state.PortIsolation = types.BoolValue(found.PortIsolation)
+	state.LLDPMed = types.BoolValue(found.LLDPMed)
+	state.Dot1x = types.Int64Value(found.Dot1x)
+	state.LoopbackDetect = types.BoolValue(found.LoopbackDetect)
+	state.EEE = types.BoolValue(found.EEE)
+	state.FlowControl = types.BoolValue(found.FlowControl)
+	state.SpanningTree = types.BoolValue(found.SpanningTree)
+	state.STPPriority = types.Int64Value(found.STPPriority)
+	state.STPExtPathCost = types.Int64Value(found.STPExtPathCost)
+	state.STPIntPathCost = types.Int64Value(found.STPIntPathCost)
+	state.STPP2PLink = types.Int64Value(found.STPP2PLink)
+	state.STPEdgePort = types.BoolValue(found.STPEdgePort)
+	state.STPLoopProtect = types.BoolValue(found.STPLoopProtect)
+	state.STPRootProtect = types.BoolValue(found.STPRootProtect)
+	state.STPTCGuard = types.BoolValue(found.STPTCGuard)
+	state.STPBPDUProtect = types.BoolValue(found.STPBPDUProtect)
+	state.STPBPDUFilter = types.BoolValue(found.STPBPDUFilter)
+	state.STPBPDUForward = types.BoolValue(found.STPBPDUForward)
 }
 
 func profileReadError(err error, id string) string {

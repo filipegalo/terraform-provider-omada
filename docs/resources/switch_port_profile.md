@@ -19,6 +19,10 @@ resource "omada_switch_port_profile" "ap_trunk" {
   tagged_network_ids   = [omada_vlan.home.id, omada_vlan.iot.id, omada_vlan.guest.id]
   vlan_config_enable   = true
   network_tags_setting = 2 # Custom
+  poe                  = 2 # Follow the switch PoE defaults
+  lldp_med             = true
+  spanning_tree        = true
+  stp_edge_port        = true
 }
 ```
 
@@ -31,9 +35,28 @@ resource "omada_switch_port_profile" "ap_trunk" {
 
 ### Optional
 
+- `dot1x` (Number) 802.1X controller mode.
+- `eee_enable` (Boolean) Enable Energy Efficient Ethernet.
+- `flow_control_enable` (Boolean) Enable Ethernet flow control.
+- `lldp_med_enable` (Boolean) Enable LLDP-MED.
+- `loopback_detect_enable` (Boolean) Enable loopback detection.
 - `native_network_id` (String) ID of the native/untagged VLAN network.
 - `network_tags_setting` (Number) VLAN tag policy: 0 Allow All, 1 Block All, or 2 Custom.
+- `poe` (Number) PoE mode: 0 off, 1 on, or 2 keep the device setting.
+- `port_isolation_enable` (Boolean) Enable port isolation.
 - `site_id` (String) Site ID. Defaults to the provider site.
+- `spanning_tree_enable` (Boolean) Enable spanning tree.
+- `stp_bpdu_filter` (Boolean) Enable STP BPDU filtering.
+- `stp_bpdu_forward` (Boolean) Enable STP BPDU forwarding.
+- `stp_bpdu_protect` (Boolean) Enable STP BPDU protection.
+- `stp_edge_port` (Boolean) Treat the port as an STP edge port.
+- `stp_ext_path_cost` (Number) STP external path cost.
+- `stp_int_path_cost` (Number) STP internal path cost.
+- `stp_loop_protect` (Boolean) Enable STP loop protection.
+- `stp_p2p_link` (Number) STP point-to-point controller mode.
+- `stp_priority` (Number) STP port priority.
+- `stp_root_protect` (Boolean) Enable STP root protection.
+- `stp_tc_guard` (Boolean) Enable STP topology-change guard.
 - `tagged_network_ids` (Set of String) VLAN network IDs carried tagged by this profile.
 - `untagged_network_ids` (Set of String) Additional VLAN network IDs carried untagged by this profile.
 - `vlan_config_enable` (Boolean) Enable the profile's VLAN configuration.

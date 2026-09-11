@@ -45,11 +45,21 @@ func paginationParams(page int) url.Values {
 // listAllPages drains a paginated authenticated GET endpoint, following
 // pages until the controller reports no rows remain.
 func listAllPages[T any](ctx context.Context, c *Client, path string) ([]T, error) {
+	return listAllPagesWithQuery[T](ctx, c, path, nil)
+}
+
+// listAllPagesWithQuery drains a list endpoint while retaining endpoint-specific
+// filters such as ACL type on every page.
+func listAllPagesWithQuery[T any](ctx context.Context, c *Client, path string, baseQuery url.Values) ([]T, error) {
 	var all []T
 	page := 1
 	for {
 		var res pageResult[T]
-		if err := c.doAuthenticated(ctx, "GET", path, paginationParams(page), nil, &res); err != nil {
+		query := paginationParams(page)
+		for key, values := range baseQuery {
+			query[key] = append([]string(nil), values...)
+		}
+		if err := c.doAuthenticated(ctx, "GET", path, query, nil, &res); err != nil {
 			return nil, err
 		}
 		all = append(all, res.Data...)

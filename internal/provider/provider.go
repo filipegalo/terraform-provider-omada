@@ -136,6 +136,9 @@ func (p *omadaProvider) Resources(_ context.Context) []func() resource.Resource 
 		resources.NewVLANResource,
 		resources.NewSwitchPortResource,
 		resources.NewSwitchPortProfileResource,
+		resources.NewWLANGroupResource,
+		resources.NewSSIDResource,
+		resources.NewACLResource,
 	}
 }
 
@@ -145,6 +148,12 @@ func (p *omadaProvider) DataSources(_ context.Context) []func() datasource.DataS
 		datasources.NewVLANDataSource,
 		datasources.NewSwitchPortProfileDataSource,
 		datasources.NewSwitchDataSource,
+		datasources.NewWLANGroupDataSource,
+		datasources.NewWLANGroupsDataSource,
+		datasources.NewSSIDDataSource,
+		datasources.NewSSIDsDataSource,
+		datasources.NewACLDataSource,
+		datasources.NewACLsDataSource,
 	}
 }
 

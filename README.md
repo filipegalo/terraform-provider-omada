@@ -37,8 +37,10 @@ in [`examples/`](examples/). `omada_vlan` manages the 802.1Q tag, gateway subnet
 scope. `omada_switch_port` manages an existing physical switch port, including its name,
 applied profile, native network and link-speed settings. `omada_switch_port_profile`
 manages the native and tagged VLAN membership of reusable switch port profiles.
-Read-only lookups are available through `data.omada_site`, `data.omada_vlan`,
-`data.omada_switch_port_profile`, and `data.omada_switch`.
+`omada_ssid` and `omada_wlan_group` manage wireless networks, while
+`omada_acl` manages gateway, switch and EAP access-control rules. Read-only
+lookups and inventory data sources are available for sites, VLANs, switches,
+port profiles, WLAN groups, SSIDs and ACLs.
 
 ## Installing
 

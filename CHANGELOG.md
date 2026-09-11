@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.0 (2026-09-11)
+
+FEATURES:
+
+* **New Resources:** `omada_wlan_group` and `omada_ssid` manage WLAN groups
+  and wireless networks, including band selection, security, VLAN tagging,
+  guest mode, 802.11r and PMF. SSID updates preserve the existing write-only
+  PSK unless a replacement is explicitly configured.
+* **New Resource:** `omada_acl` manages gateway, switch and EAP ACL rules with
+  protocol, source, destination and traffic-direction selectors.
+* **New Data Sources:** `omada_wlan_group`, `omada_wlan_groups`, `omada_ssid`,
+  `omada_ssids`, `omada_acl` and `omada_acls` support detailed lookup and
+  inventory/discovery workflows.
+* `omada_switch_port_profile` now manages PoE, port isolation, LLDP-MED,
+  802.1X, loopback detection, EEE, flow control and spanning-tree settings.
+
+NOTES:
+
+* WLAN, SSID and ACL reads were verified against Omada Controller 6.3.0.45.
+  Existing SSIDs and ACLs were imported into a real homelab configuration and
+  produced a no-change OpenTofu plan.
+* SSID, ACL and port-profile updates use full-object read-modify-write and
+  preserve controller-owned fields that are outside the Terraform schema.
+
 ## 0.2.0 (2026-09-11)
 
 FEATURES:

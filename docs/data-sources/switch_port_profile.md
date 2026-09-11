@@ -33,8 +33,27 @@ output "all_profile_id" {
 
 ### Read-Only
 
+- `dot1x` (Number) 802.1X controller mode.
+- `eee_enable` (Boolean) Whether Energy Efficient Ethernet is enabled.
+- `flow_control_enable` (Boolean) Whether flow control is enabled.
+- `lldp_med_enable` (Boolean) Whether LLDP-MED is enabled.
+- `loopback_detect_enable` (Boolean) Whether loopback detection is enabled.
 - `native_network_id` (String) Native/untagged VLAN network ID.
 - `network_tags_setting` (Number) VLAN tag policy: 0 Allow All, 1 Block All, or 2 Custom.
+- `poe` (Number) PoE mode.
+- `port_isolation_enable` (Boolean) Whether port isolation is enabled.
+- `spanning_tree_enable` (Boolean) Whether spanning tree is enabled.
+- `stp_bpdu_filter` (Boolean) Whether STP BPDU filtering is enabled.
+- `stp_bpdu_forward` (Boolean) Whether STP BPDU forwarding is enabled.
+- `stp_bpdu_protect` (Boolean) Whether STP BPDU protection is enabled.
+- `stp_edge_port` (Boolean) Whether this is an STP edge port.
+- `stp_ext_path_cost` (Number) STP external path cost.
+- `stp_int_path_cost` (Number) STP internal path cost.
+- `stp_loop_protect` (Boolean) Whether STP loop protection is enabled.
+- `stp_p2p_link` (Number) STP point-to-point controller mode.
+- `stp_priority` (Number) STP port priority.
+- `stp_root_protect` (Boolean) Whether STP root protection is enabled.
+- `stp_tc_guard` (Boolean) Whether STP topology-change guard is enabled.
 - `tagged_network_ids` (Set of String) Tagged VLAN network IDs.
 - `untagged_network_ids` (Set of String) Additional untagged VLAN network IDs.
 - `vlan_config_enable` (Boolean) Whether profile VLAN configuration is enabled.
