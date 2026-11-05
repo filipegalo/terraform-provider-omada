@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -261,9 +262,25 @@ func (c *Client) doRaw(ctx context.Context, method, path string, query url.Value
 	return &env, nil
 }
 
+// APIError is a response the controller answered with a non-zero errorCode.
+// Callers that have to react to one specific code unwrap it with errors.As.
+type APIError struct {
+	Code int
+	Msg  string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error %d: %s", e.Code, e.Msg)
+}
+
+func isAPIError(err error, code int) bool {
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.Code == code
+}
+
 func checkEnvelope(env *envelope) error {
 	if env.ErrorCode != 0 {
-		return fmt.Errorf("API error %d: %s", env.ErrorCode, env.Msg)
+		return &APIError{Code: env.ErrorCode, Msg: env.Msg}
 	}
 	return nil
 }
@@ -285,6 +302,19 @@ func (c *Client) doAuthenticatedWithHeaders(ctx context.Context, method, path st
 		return c.doOpenAPIAttempt(ctx, method, path, query, body, out, headers, true)
 	}
 	return c.doAuthenticatedAttempt(ctx, method, path, query, body, out, headers, true)
+}
+
+// doPublicOpenAPI calls an endpoint of the documented public Open API. With
+// client credentials it authenticates with the application's access token.
+// Without them it uses the classic session and marks the request as coming
+// from the controller's own web UI: confirmed live against 6.3.0.45, a public
+// Open API path answers a classic-session request without that marker with
+// HTTP 401 and error -44116, and accepts the same request with it.
+func (c *Client) doPublicOpenAPI(ctx context.Context, method, path string, body, out any) error {
+	if c.hasOpenAPICredentials() {
+		return c.doAuthenticated(ctx, method, path, nil, body, out)
+	}
+	return c.doAuthenticatedWithHeaders(ctx, method, path, nil, body, out, openAPIHeaders)
 }
 
 func (c *Client) doOpenAPIAttempt(ctx context.Context, method, path string, query url.Values, body, out any, headers map[string]string, allowRetry bool) error {

@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+FEATURES:
+
+* **New Resource:** `omada_switch` — manages the name of a switch the
+  controller has already adopted, imported by MAC. Regular and Agile Series
+  (Easy Managed) switches are both supported; the provider follows the
+  controller's own answer to pick the matching endpoint. Removing it from
+  Terraform only relinquishes management and does not forget or reset the
+  switch.
+* **New Resource:** `omada_site` — manages name, time zone and NTP servers of
+  an existing site, imported by site name or ID. It never creates or deletes a
+  site. Time zones are the controller's own ids (one IANA name per offset
+  group: `Europe/Amsterdam` covers Berlin, `Europe/Berlin` is rejected).
+* **New Resource:** `omada_site_snmp` — switches SNMP v1/v2c and v3 of an
+  existing site on or off. Credentials are neither read into state nor sent.
+
+NOTES:
+
+* Both resources use the public Open API: the application's access token when
+  `client_id` and `client_secret` are configured, the classic session
+  otherwise. A switch rename is a partial PATCH that carries only the name. A
+  site rename is a full-object read-modify-write, because the endpoint replaces
+  the whole site; region, time zone, NTP, DST, scenario and location are sent
+  back as read.
+* Verified against Omada Controller 6.3.0.45: reads and the endpoint selection
+  for Agile Series switches with both authentication modes, writes with Open
+  API client credentials.
+* Verified against Omada Controller 6.3.0.111 with Open API client
+  credentials: import, time zone, NTP and SNMP changes on two sites, a plan
+  without changes afterwards. The SNMP PATCH needs both switches in the body.
+
 ## 0.4.0 (2026-09-11)
 
 FEATURES:

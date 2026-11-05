@@ -41,8 +41,13 @@ type mockServer struct {
 	ports          map[string]SwitchPort      // keyed by switch MAC and physical port
 	profiles       map[string]map[string]any  // keyed by port-profile ID
 	devices        []Device
-	lastPutPath    string // last PUT request path, for asserting what key an update used
+	switches       map[string]*mockSwitch    // general config, keyed by dash-separated uppercase MAC
+	siteDetails    map[string]map[string]any // Open API site documents, keyed by site ID
+	siteSNMP       map[string]map[string]any // SNMP service settings, keyed by site ID
+	lastPutPath    string                    // last PUT request path, for asserting what key an update used
 	lastPatchPath  string
+	lastPatchBody  map[string]any // last general-config PATCH body, for asserting what a partial update sent
+	lastPutBody    map[string]any // last site PUT body, for asserting what a full-object update sent
 }
 
 const (
@@ -73,7 +78,10 @@ func newMockServer(t *testing.T, controllerVer string) *mockServer {
 				LinkSpeed: 0, Duplex: 0,
 			},
 		},
-		profiles: map[string]map[string]any{},
+		profiles:    map[string]map[string]any{},
+		switches:    map[string]*mockSwitch{},
+		siteDetails: map[string]map[string]any{},
+		siteSNMP:    map[string]map[string]any{},
 		devices: []Device{{
 			Name: "Main Switch", Type: "switch", Model: "SG2210P", MAC: "D8-44-89-38-C6-C0", IP: "10.20.1.2", StatusCategory: 1,
 		}},
@@ -107,11 +115,26 @@ func (m *mockServer) route(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.serveNetworkParamCheck(w, r)
+	case strings.Contains(r.URL.Path, "/openapi/") && strings.HasSuffix(r.URL.Path, "/general-config"):
+		if !m.checkAuth(w, r) || !m.checkWebLocal(w, r) {
+			return
+		}
+		m.serveSwitchGeneralConfig(w, r)
 	case strings.Contains(r.URL.Path, "/openapi/") && strings.Contains(r.URL.Path, "/switches/"):
 		if !m.checkAuth(w, r) {
 			return
 		}
 		m.serveSwitchPortPatch(w, r)
+	case strings.Contains(r.URL.Path, "/openapi/") && strings.HasSuffix(r.URL.Path, "/setting/service/snmp"):
+		if !m.checkAuth(w, r) {
+			return
+		}
+		m.serveSiteSNMP(w, r)
+	case isSiteDetailPath(r.URL.Path):
+		if !m.checkAuth(w, r) || !m.checkWebLocal(w, r) {
+			return
+		}
+		m.serveSiteDetail(w, r)
 	case strings.Contains(r.URL.Path, "/openapi/") && strings.Contains(r.URL.Path, lanNetworksEndpoint):
 		if !m.checkAuth(w, r) {
 			return
@@ -405,6 +428,20 @@ func (m *mockServer) checkAuth(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	return true
+}
+
+// checkWebLocal mirrors how the controller guards its public Open API paths:
+// confirmed live against 6.3.0.45, a classic-session request is only accepted
+// there when it carries the web UI's Omada-Request-Source marker, and is
+// otherwise answered with HTTP 401 and error -44116.
+func (m *mockServer) checkWebLocal(w http.ResponseWriter, r *http.Request) bool {
+	if r.Header.Get("Omada-Request-Source") == "web-local" {
+		return true
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	_ = json.NewEncoder(w).Encode(envelopeResponse{ErrorCode: -44116, Msg: "Open API Authorized failed, please check whether the input parameters are legal."})
+	return false
 }
 
 // paginationParams asserts the client always sends the classic API's
