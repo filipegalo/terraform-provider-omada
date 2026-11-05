@@ -43,6 +43,7 @@ type mockServer struct {
 	devices        []Device
 	switches       map[string]*mockSwitch    // general config, keyed by dash-separated uppercase MAC
 	siteDetails    map[string]map[string]any // Open API site documents, keyed by site ID
+	siteSNMP       map[string]map[string]any // SNMP service settings, keyed by site ID
 	lastPutPath    string                    // last PUT request path, for asserting what key an update used
 	lastPatchPath  string
 	lastPatchBody  map[string]any // last general-config PATCH body, for asserting what a partial update sent
@@ -80,6 +81,7 @@ func newMockServer(t *testing.T, controllerVer string) *mockServer {
 		profiles:    map[string]map[string]any{},
 		switches:    map[string]*mockSwitch{},
 		siteDetails: map[string]map[string]any{},
+		siteSNMP:    map[string]map[string]any{},
 		devices: []Device{{
 			Name: "Main Switch", Type: "switch", Model: "SG2210P", MAC: "D8-44-89-38-C6-C0", IP: "10.20.1.2", StatusCategory: 1,
 		}},
@@ -123,6 +125,11 @@ func (m *mockServer) route(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.serveSwitchPortPatch(w, r)
+	case strings.Contains(r.URL.Path, "/openapi/") && strings.HasSuffix(r.URL.Path, "/setting/service/snmp"):
+		if !m.checkAuth(w, r) {
+			return
+		}
+		m.serveSiteSNMP(w, r)
 	case isSiteDetailPath(r.URL.Path):
 		if !m.checkAuth(w, r) || !m.checkWebLocal(w, r) {
 			return

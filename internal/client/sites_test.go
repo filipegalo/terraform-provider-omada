@@ -255,7 +255,8 @@ func TestFindSite(t *testing.T) {
 // so that a caller can still compare against it after building the request.
 func TestSiteUpdateBodyDoesNotModifyWhatWasRead(t *testing.T) {
 	current := decodeTestJSON(t, testSiteDocument)
-	body := siteUpdateBody(current, "example-site")
+	name := "example-site"
+	body := siteUpdateBody(current, SiteUpdate{Name: &name})
 	if !reflect.DeepEqual(current, decodeTestJSON(t, testSiteDocument)) {
 		t.Errorf("siteUpdateBody changed the document it was given: %#v", current)
 	}
@@ -266,5 +267,52 @@ func TestSiteUpdateBodyDoesNotModifyWhatWasRead(t *testing.T) {
 		if _, ok := body[field]; ok {
 			t.Errorf("body still contains the identity field %q", field)
 		}
+	}
+}
+
+// TestUpdateSiteChangesOnlyGivenFields covers time zone and NTP: the fields
+// given are replaced, everything else survives the full-object PUT, and an
+// empty server list clears the servers while a nil one keeps them.
+func TestUpdateSiteChangesOnlyGivenFields(t *testing.T) {
+	m := newMockServer(t, "6.3.0.111")
+	m.sites = []Site{{ID: testSiteID, Name: "Default"}}
+	m.siteDetails[testSiteID] = decodeTestJSON(t, testSiteDocument)
+	srv := m.start()
+	defer srv.Close()
+	c := newTestClient(t, srv)
+	ctx := context.Background()
+
+	tz, off := "Europe/Amsterdam", false
+	if err := c.UpdateSite(ctx, testSiteID, SiteUpdate{TimeZone: &tz, NTPEnable: &off}); err != nil {
+		t.Fatalf("UpdateSite: %v", err)
+	}
+	site, err := c.GetSite(ctx, testSiteID)
+	if err != nil {
+		t.Fatalf("GetSite: %v", err)
+	}
+	if site.TimeZone != tz || site.NTPEnable || !reflect.DeepEqual(site.NTPServers, []string{"pool.ntp.org"}) || site.Name != "Default" {
+		t.Errorf("site = %+v; want time zone %s, NTP off, servers and name unchanged", site, tz)
+	}
+	if region, _ := site.Raw["region"].(string); region != "United States" {
+		t.Errorf("region = %q; want it kept", region)
+	}
+
+	if err := c.UpdateSite(ctx, testSiteID, SiteUpdate{NTPServers: []string{}}); err != nil {
+		t.Fatalf("UpdateSite clearing servers: %v", err)
+	}
+	if site, err = c.GetSite(ctx, testSiteID); err != nil || len(site.NTPServers) != 0 {
+		t.Errorf("NTP servers = %v, %v; want none after an empty list", site.NTPServers, err)
+	}
+}
+
+// TestSiteDetailReadsNullNTPServers: a site that never had NTP servers
+// returns null, which must read as an empty list rather than fail.
+func TestSiteDetailReadsNullNTPServers(t *testing.T) {
+	var site SiteDetail
+	if err := json.Unmarshal([]byte(`{"name":"x","timeZone":"UTC","ntpEnable":false,"ntpServers":null}`), &site); err != nil {
+		t.Fatal(err)
+	}
+	if site.NTPServers == nil || len(site.NTPServers) != 0 || site.TimeZone != "UTC" {
+		t.Errorf("site = %+v; want an empty, non-nil server list", site)
 	}
 }

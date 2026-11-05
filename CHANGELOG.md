@@ -10,8 +10,12 @@ FEATURES:
   controller's own answer to pick the matching endpoint. Removing it from
   Terraform only relinquishes management and does not forget or reset the
   switch.
-* **New Resource:** `omada_site` — manages the name of an existing site,
-  imported by site name or ID. It never creates or deletes a site.
+* **New Resource:** `omada_site` — manages name, time zone and NTP servers of
+  an existing site, imported by site name or ID. It never creates or deletes a
+  site. Time zones are the controller's own ids (one IANA name per offset
+  group: `Europe/Amsterdam` covers Berlin, `Europe/Berlin` is rejected).
+* **New Resource:** `omada_site_snmp` — switches SNMP v1/v2c and v3 of an
+  existing site on or off. Credentials are neither read into state nor sent.
 
 NOTES:
 
@@ -24,6 +28,9 @@ NOTES:
 * Verified against Omada Controller 6.3.0.45: reads and the endpoint selection
   for Agile Series switches with both authentication modes, writes with Open
   API client credentials.
+* Verified against Omada Controller 6.3.0.111 with Open API client
+  credentials: import, time zone, NTP and SNMP changes on two sites, a plan
+  without changes afterwards. The SNMP PATCH needs both switches in the body.
 
 ## 0.4.0 (2026-09-11)
 

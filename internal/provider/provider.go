@@ -151,6 +151,7 @@ func (p *omadaProvider) Resources(_ context.Context) []func() resource.Resource 
 		resources.NewDHCPReservationResource,
 		resources.NewVLANResource,
 		resources.NewSiteResource,
+		resources.NewSiteSNMPResource,
 		resources.NewSwitchResource,
 		resources.NewSwitchPortResource,
 		resources.NewSwitchPortProfileResource,

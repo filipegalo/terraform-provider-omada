@@ -3,23 +3,26 @@
 page_title: "omada_site Resource - omada"
 subcategory: ""
 description: |-
-  Settings of an existing Omada site, currently its name. The site must already exist: creating this resource takes over the site, and removing it only stops Terraform management; a site is never created or deleted. Every other site setting (region, time zone, NTP, DST, scenario, location) is left as it is.
+  Settings of an existing Omada site: name, time zone and NTP. The site must already exist: creating this resource takes over the site, and removing it only stops Terraform management; a site is never created or deleted. An optional setting that is not configured is read but left as it is, and so is every setting this resource does not model (region, DST, scenario, location).
 ---
 
 # omada_site (Resource)
 
-Settings of an existing Omada site, currently its name. The site must already exist: creating this resource takes over the site, and removing it only stops Terraform management; a site is never created or deleted. Every other site setting (region, time zone, NTP, DST, scenario, location) is left as it is.
+Settings of an existing Omada site: name, time zone and NTP. The site must already exist: creating this resource takes over the site, and removing it only stops Terraform management; a site is never created or deleted. An optional setting that is not configured is read but left as it is, and so is every setting this resource does not model (region, DST, scenario, location).
 
 ## Example Usage
 
 ```terraform
-# Manages the name of the provider's site. It does not create or delete a
-# site: removing this resource only stops Terraform management.
+# Manages name, time zone and NTP of the provider's site. It does not create
+# or delete a site: removing this resource only stops Terraform management.
 #
 # Configure the provider's `site` by ID when renaming it, since a provider
 # configured with the previous name can no longer resolve the site.
 resource "omada_site" "this" {
-  name = "example-site"
+  name        = "example-site"
+  time_zone   = "Europe/Amsterdam" # Omada's id for Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna
+  ntp_enabled = true
+  ntp_servers = ["pool.ntp.org"]
 }
 ```
 
@@ -32,7 +35,10 @@ resource "omada_site" "this" {
 
 ### Optional
 
+- `ntp_enabled` (Boolean) Whether the site's devices take their time from `ntp_servers`.
+- `ntp_servers` (List of String) NTP servers (host names or addresses) of the site's devices, in order.
 - `site_id` (String) Site ID. Defaults to the provider site.
+- `time_zone` (String) Time zone of the site's devices, from the controller's own list (Omada Open API Access Guide, section 5.1): an IANA name, but only one per offset group, for example `Europe/Amsterdam` for Amsterdam, Berlin, Bern, Rome, Stockholm and Vienna. The controller rejects any other name, `Europe/Berlin` included, with error -1001.
 
 ### Read-Only
 

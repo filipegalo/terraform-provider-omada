@@ -48,8 +48,9 @@ provider "omada" {
 
 Full reference documentation is generated under [`docs/`](docs/), with runnable examples
 in [`examples/`](examples/). `omada_vlan` manages the 802.1Q tag, gateway subnet and DHCP
-scope. `omada_site` manages the name of an existing site and `omada_switch` the name of
-an adopted switch; neither creates or removes the object it manages.
+scope. `omada_site` manages name, time zone and NTP of an existing site,
+`omada_site_snmp` which SNMP versions its devices answer, and `omada_switch` the name of
+an adopted switch; none of them creates or removes the object it manages.
 `omada_switch_port` manages an existing physical switch port, including its name,
 applied profile, native network and link-speed settings. `omada_switch_port_profile`
 manages the native and tagged VLAN membership of reusable switch port profiles.
